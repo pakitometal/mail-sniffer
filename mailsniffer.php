@@ -4,11 +4,9 @@ class mailsniffer {
 
 	private $___conn = NULL;
 
-	private $server = NULL;
-	private $port = NULL;
+	private $mailbox = NULL;
 	private $user = NULL;
 	private $password = NULL;
-	private $flags = NULL;
 
 	/**
 	 * Class constructor
@@ -34,7 +32,7 @@ class mailsniffer {
 
 		if (!(isset($opts['server']) && isset($opts['protocol']) && isset($opts['user']) && isset($opts['password']))) trigger_error('Mandatory param missing', E_ERROR);
 
-		$flags['protocol'] = strtolower($opt['protocol']);
+		$flags['protocol'] = strtolower($opts['protocol']);
 		if ('imap' != $opts['protocol'] && 'pop3' != $opts['protocol']) $flags['protocol'] = 'imap';
 
 		if (isset($opts['encryption']) && FALSE != $opts['encryption']){
@@ -43,10 +41,11 @@ class mailsniffer {
 				case 'tls':
 				case 'notls':
 					$flags['encryption'] = $opts['encryption'];
-					$flags['validate_cert'] = (isset($opts['validate_cert']) && $opts['validate_cert']) ? 'validate-cert' : 'novalidate-cert';
 				break;
 			}
 		}
+
+		$flags['validate_cert'] = (isset($opts['validate_cert']) && $opts['validate_cert']) ? 'validate-cert' : 'novalidate-cert';
 
 		switch ($flags['protocol']){
 			case 'imap':
@@ -58,11 +57,9 @@ class mailsniffer {
 			break;
 		}
 
-		$this->server = gethostbyname($opts['server']);
-		$this->port = $port;
+		$this->mailbox = '{'.gethostbyname($opts['server']).':'.$port.'/'.implode('/', $flags).'}';
 		$this->user = $opts['user'];
 		$this->password = $opts['password'];
-		$this->flags = $flags;
 
 	}
 
@@ -72,7 +69,7 @@ class mailsniffer {
 	 * Closes the current connection (if any), and nullifies all attributes.
 	 *
 	 */
-	public function __destructor(){
+	public function __destruct(){
 
 		if (NULL != $this->___conn) $this->close();
 		$this->flags = $this->password = $this->user = $this->port = $this->server = NULL;
@@ -84,7 +81,7 @@ class mailsniffer {
 	 * in the ___conn attribute.
 	 *
 	 */
-	public function open(){ $this->___conn = imap_open('{'.$this->server.':'.$this->port.'/'.implode('/', $this->flags).'}', $this->user, $this->password); }
+	public function open(){ $this->___conn = imap_open($this->mailbox, $this->user, $this->password); }
 
 	/**
 	 * Closes the connection to the mail server in the ___conn attribute
