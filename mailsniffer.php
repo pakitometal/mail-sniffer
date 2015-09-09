@@ -4,8 +4,14 @@ class mailsniffer {
 
 	private $___conn = NULL;
 
+	private $server = NULL;
+	private $port = NULL;
+	private $user = NULL;
+	private $password = NULL;
+	private $flags = NULL;
+
 	/**
-	 * Constructor. Create a resource using the imap_open PHP function.
+	 * Class constructor
 	 *
 	 * @param $opts Indexed Array with the params for the connection to the mail server.
 	 * Supported keys/params are:
@@ -31,7 +37,6 @@ class mailsniffer {
 		$flags['protocol'] = strtolower($opt['protocol']);
 		if ('imap' != $opts['protocol'] && 'pop3' != $opts['protocol']) $flags['protocol'] = 'imap';
 
-		$flags['encryption'] = '';
 		if (isset($opts['encryption']) && FALSE != $opts['encryption']){
 			switch ($opts['encryption']){
 				case 'ssl':
@@ -53,7 +58,44 @@ class mailsniffer {
 			break;
 		}
 
-		$this->___conn = imap_open('{'.gethostbyname($opts['server']).':'.$port.'/'.implode('/', $flags).'}', $opts['user'], $opts['password']);
+		$this->server = gethostbyname($opts['server']);
+		$this->port = $port;
+		$this->user = $opts['user'];
+		$this->password = $opts['password'];
+		$this->flags = $flags;
+
+	}
+
+	/**
+	 * Class destructor.
+	 *
+	 * Closes the current connection (if any), and nullifies all attributes.
+	 *
+	 */
+	public function __destructor(){
+
+		if (NULL != $this->___conn) $this->close();
+		$this->flags = $this->password = $this->user = $this->port = $this->server = NULL;
+
+	}
+
+	/**
+	 * Opens the connection to the mail server and stores the connection reference
+	 * in the ___conn attribute.
+	 *
+	 */
+	public function open(){ $this->___conn = imap_open('{'.$this->server.':'.$this->port.'/'.implode('/', $this->flags).'}', $this->user, $this->password); }
+
+	/**
+	 * Closes the connection to the mail server in the ___conn attribute
+	 * and nullifies said attribute.
+	 *
+	 */
+	public function close(){
+
+		if ($status = imap_close($this->___conn))
+			$this->___conn = NULL;
+		return $status;
 
 	}
 
