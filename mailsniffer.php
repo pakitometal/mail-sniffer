@@ -49,7 +49,7 @@ class mailsniffer {
 
 		switch ($flags['protocol']){
 			case 'imap':
-				$port = isset($opts['port']) ? $opts['port'] : ('' != $flags['encryption'] ? 465 : 143);
+				$port = isset($opts['port']) ? $opts['port'] : ('' != $flags['encryption'] ? 993 : 143);
 			break;
 
 			case 'pop3':
@@ -72,7 +72,7 @@ class mailsniffer {
 	public function __destruct(){
 
 		if (NULL != $this->___conn) $this->close();
-		$this->flags = $this->password = $this->user = $this->port = $this->server = NULL;
+		$this->password = $this->user = $this->mailbox = NULL;
 
 	}
 
@@ -81,7 +81,9 @@ class mailsniffer {
 	 * in the ___conn attribute.
 	 *
 	 */
-	public function open(){ $this->___conn = imap_open($this->mailbox, $this->user, $this->password); }
+	public function open(){
+		if (!$this->___conn) $this->___conn = imap_open($this->mailbox, $this->user, $this->password);
+	}
 
 	/**
 	 * Closes the connection to the mail server in the ___conn attribute
@@ -90,10 +92,24 @@ class mailsniffer {
 	 */
 	public function close(){
 
-		if ($status = imap_close($this->___conn))
-			$this->___conn = NULL;
+		$status = TRUE;
+		if ($this->___conn && $status = imap_close($this->___conn)) $this->___conn = NULL;
 		return $status;
 
+	}
+
+	public function getmailboxes($pattern='*'){
+
+		$mailboxes = array();
+		if ($this->___conn) $mailboxes = imap_getmailboxes($this->___conn, $this->mailbox, $pattern);
+		return $mailboxes;
+
+	}
+
+	public function sniff($mailbox){
+	}
+
+	public function sniff_all(){
 	}
 
 }
