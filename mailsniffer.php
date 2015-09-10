@@ -4,9 +4,14 @@ class mailsniffer {
 
 	private $___conn = NULL;
 
-	private $mailbox = NULL;
+	private $main_mailbox = NULL;
 	private $user = NULL;
 	private $password = NULL;
+
+	const IMAP_DEFAULT_PORT = 143;
+	const POP3_DEFAULT_PORT = 110;
+	const IMAP_SSL_DEFAULT_PORT = 993;
+	const POP3_SSL_DEFAULT_PORT = 995;
 
 	/**
 	 * Class constructor
@@ -49,19 +54,25 @@ class mailsniffer {
 
 		switch ($flags['protocol']){
 			case 'imap':
-				$port = isset($opts['port']) ? $opts['port'] : ('' != $flags['encryption'] ? 993 : 143);
+				$port = isset($opts['port']) ? $opts['port'] : ('' != $flags['encryption'] ? self::IMAP_SSL_DEFAULT_PORT : self::IMAP_DEFAULT_PORT);
 			break;
 
 			case 'pop3':
-				$port = isset($opts['port']) ? $opts['port'] : ('' != $flags['encryption'] ? 995 : 110);
+				$port = isset($opts['port']) ? $opts['port'] : ('' != $flags['encryption'] ? self::POP3_SSL_DEFAULT_PORT : self::POP3_DEFAULT_PORT);
 			break;
 		}
 
-		$this->mailbox = '{'.gethostbyname($opts['server']).':'.$port.'/'.implode('/', $flags).'}';
+		$this->main_mailbox = '{'.gethostbyname($opts['server']).':'.$port.'/'.implode('/', $flags).'}';
 		$this->user = $opts['user'];
 		$this->password = $opts['password'];
 
 	}
+
+	/**
+	 * Class cloner.
+	 *
+	 */
+	public function __clone(){ $this->___conn = imap_open($this->main_mailbox, $this->user, $this->password, OP_READONLY); }
 
 	/**
 	 * Class destructor.
@@ -72,7 +83,7 @@ class mailsniffer {
 	public function __destruct(){
 
 		if (NULL != $this->___conn) $this->close();
-		$this->password = $this->user = $this->mailbox = NULL;
+		$this->password = $this->user = $this->main_mailbox = NULL;
 
 	}
 
@@ -81,9 +92,7 @@ class mailsniffer {
 	 * in the ___conn attribute.
 	 *
 	 */
-	public function open(){
-		if (!$this->___conn) $this->___conn = imap_open($this->mailbox, $this->user, $this->password);
-	}
+	public function open(){ if (!$this->___conn) $this->___conn = imap_open($this->main_mailbox, $this->user, $this->password, OP_READONLY); }
 
 	/**
 	 * Closes the connection to the mail server in the ___conn attribute
@@ -101,15 +110,31 @@ class mailsniffer {
 	public function getmailboxes($pattern='*'){
 
 		$mailboxes = array();
-		if ($this->___conn) $mailboxes = imap_getmailboxes($this->___conn, $this->mailbox, $pattern);
+		if ($this->___conn) $mailboxes = imap_getmailboxes($this->___conn, $this->main_mailbox, $pattern);
 		return $mailboxes;
 
 	}
 
 	public function sniff($mailbox){
+
+		if (imap_reopen($this->___conn, $mailbox, OP_READONLY)){
+			$mailbox_info = imap_mailboxmsginfo($this->___conn);
+			var_dump($mailbox_info);
+		}
+
+		imap_reopen($this->___conn, $this->main_mailbox, OP_READONLY);
+
 	}
 
 	public function sniff_all(){
+
+		$messages = array();
+
+		$mailboxes = $this->getmailboxes();
+		foreach ($mailboxes as $mailbox){
+			$messages[(string)$mailbox->name] = TRUE;
+		}
+
 	}
 
 }
